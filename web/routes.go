@@ -8,23 +8,34 @@ import (
 
 func InitRouts(mux *http.ServeMux, manager *middlewares.Manager) {
 	mux.Handle(
-		"POST /xx",
+		"POST /users",
 		manager.With(
 			http.HandlerFunc(handlers.Register),
 		),
 	)
 
 	mux.Handle(
-		"GET /xx",
+		"GET /users",
 		manager.With(
 			http.HandlerFunc(handlers.Login),
 		),
 	)
 
 	mux.Handle(
-		"GET /up",
-		manager.With(
-			http.HandlerFunc(handlers.Update),
+		"POST /products",
+		middlewares.AuthenticateJWT(
+			manager.With(
+				http.HandlerFunc(handlers.BuyProduct),
+			),
+		),
+	)
+
+	mux.Handle(
+		"GET /cart",
+		middlewares.AuthenticateJWT(
+			manager.With(
+				http.HandlerFunc(handlers.ShowCart),
+			),
 		),
 	)
 }

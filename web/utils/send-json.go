@@ -13,7 +13,7 @@ func SendJson(w http.ResponseWriter, status int, data interface{}) {
 
 	if err != nil {
 		err = errors.New("failed converting into json")
-		SendError(w, status, err, data)
+		SendError(w, status, err)
 		return
 	}
 	w.WriteHeader(status)

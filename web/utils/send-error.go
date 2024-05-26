@@ -2,10 +2,10 @@ package utils
 
 import "net/http"
 
-func SendError(w http.ResponseWriter, status int, message error, data interface{}) {
+func SendError(w http.ResponseWriter, status int, err error /*data interface{}*/) {
 	SendJson(w, status, map[string]any{
 		"status":  false,
-		"message": message,
-		"data":    data,
+		"message": err.Error(),
+		//"data":    data,
 	})
 }

@@ -1,34 +1,38 @@
 package handlers
 
 import (
+	"ecommerce/db"
 	"ecommerce/web/utils"
 	"encoding/json"
 	"net/http"
 )
 
-type User struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"password"`
+type NewUser struct {
+	Name     string `json:"name" validate:"required,min=3,max=20,alpha"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8,max=20"`
 }
 
-var Users []User
-
 func Register(w http.ResponseWriter, r *http.Request) {
-	var user User
+
+	var user NewUser
+
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		utils.SendError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	if user.Username == "" || user.Password == "" {
-		http.Error(w, "Username and password are required", http.StatusBadRequest)
+	err = utils.Validate(user)
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, err)
 		return
 	}
 
-	user.ID = len(Users) + 1
-	Users = append(Users, user)
-
-	utils.SendData(w, Users)
+	err = db.Create(user.Name, user.Email, user.Password)
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, err)
+		return
+	}
+	utils.SendBothData(w, user, "Register successful ")
 }

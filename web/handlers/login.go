@@ -2,36 +2,49 @@ package handlers
 
 import (
 	"ecommerce/auth"
+	"ecommerce/db"
+	model "ecommerce/models"
 	"ecommerce/web/utils"
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
-func Login(w http.ResponseWriter, r *http.Request) {
-	var user User
-	json.NewDecoder(r.Body).Decode(&user)
+type LoginUser struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8,max=20"`
+}
 
-	id := CheckUser(user)
-	if id == -1 {
-		utils.SendData(w, "Invalid username or password")
+func Login(w http.ResponseWriter, r *http.Request) {
+
+	var user LoginUser
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	token, err := auth.GenerateToken(user.Username, id)
+
+	err = utils.Validate(user)
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	err = db.Login(user.Email, user.Password)
+	if err != nil {
+		utils.SendError(w, http.StatusBadRequest, fmt.Errorf("Wrong username / password "))
+		return
+	}
+
+	usrchan := make(chan model.User)   //channel
+	go db.GetUser(user.Email, usrchan) //goroutine
+	usr := <-usrchan                   // get user from goroutine
+
+	token, err := auth.GenerateToken(usr)
+
 	if err != nil {
 		http.Error(w, "Error generating token", http.StatusInternalServerError)
 		return
 	}
-	utils.SendData(w, token)
-
-}
-
-func CheckUser(user User) int {
-
-	for i := 0; i < len(Users); i++ {
-		if Users[i].Username == user.Username && Users[i].Password == user.Password {
-			return i
-		}
-	}
-	return -1
-
+	utils.SendBothData(w, token, usr)
 }

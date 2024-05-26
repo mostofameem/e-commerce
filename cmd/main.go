@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ecommerce/config"
 	"ecommerce/db"
 	"ecommerce/web"
 	"log"
@@ -8,6 +9,7 @@ import (
 )
 
 func main() {
+	config.ReadConfig()
 
 	if err := db.InitDB(); err != nil {
 		log.Fatal("Error initializing database:", err)
@@ -16,6 +18,6 @@ func main() {
 
 	mux := web.StartServer()
 	log.Printf("Server Running on port 3000")
-	log.Fatal(http.ListenAndServe(":3000", mux))
+	log.Fatal(http.ListenAndServe(":"+config.GetConfig().S_port, mux))
 
 }

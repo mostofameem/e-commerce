@@ -1,6 +1,12 @@
 package middlewares
 
-import "net/http"
+import (
+	"ecommerce/auth"
+	"ecommerce/web/utils"
+	"fmt"
+	"net/http"
+	"strings"
+)
 
 type Middleware func(http.Handler) http.Handler
 
@@ -32,4 +38,22 @@ func (m *Manager) With(handler http.Handler, middlewares ...Middleware) http.Han
 	}
 
 	return h
+}
+
+func AuthenticateJWT(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			utils.SendError(w, http.StatusForbidden, fmt.Errorf("authorization header is missing"))
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		token, err := auth.ParseToken(tokenString)
+		if err != nil || !token.Valid {
+			utils.SendError(w, http.StatusForbidden, fmt.Errorf("invalid token"))
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

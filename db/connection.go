@@ -2,6 +2,8 @@ package db
 
 import (
 	"database/sql"
+	"ecommerce/config"
+	"fmt"
 
 	_ "github.com/lib/pq"
 )
@@ -11,14 +13,14 @@ var err error
 
 func InitDB() error {
 
-	connStr := "host=localhost port=5432 user=root  password=admin dbname=Db sslmode=disable"
+	config := config.GetConfig()
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		config.Host, config.Port, config.User, config.Password, config.Dbname, config.Sslmode)
 
 	Db, err = sql.Open("postgres", connStr)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 func Close() {
 	Db.Close()
