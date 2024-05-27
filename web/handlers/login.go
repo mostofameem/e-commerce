@@ -7,6 +7,7 @@ import (
 	"ecommerce/web/utils"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -32,7 +33,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	err = db.Login(user.Email, user.Password)
 	if err != nil {
-		utils.SendError(w, http.StatusBadRequest, fmt.Errorf("Wrong username / password "))
+		utils.SendError(w, http.StatusBadRequest, fmt.Errorf("wrong username / password "))
 		return
 	}
 
@@ -40,11 +41,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	go db.GetUser(user.Email, usrchan) //goroutine
 	usr := <-usrchan                   // get user from goroutine
 
-	token, err := auth.GenerateToken(usr)
+	accessToken, refreshToken, err := auth.GenerateToken(usr)
 
 	if err != nil {
 		http.Error(w, "Error generating token", http.StatusInternalServerError)
 		return
 	}
-	utils.SendBothData(w, token, usr)
+	log.Println(refreshToken)
+	utils.SendBothData(w, accessToken, usr)
 }

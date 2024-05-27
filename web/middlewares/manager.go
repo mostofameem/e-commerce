@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 type Middleware func(http.Handler) http.Handler
@@ -49,11 +52,43 @@ func AuthenticateJWT(next http.Handler) http.Handler {
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		token, err := auth.ParseToken(tokenString)
-		if err != nil || !token.Valid {
-			utils.SendError(w, http.StatusForbidden, fmt.Errorf("invalid token"))
+		token, _ := auth.ParseToken(tokenString)
+		if token.Valid {
+			next.ServeHTTP(w, r) // Token is valid, continue with the request
 			return
 		}
-		next.ServeHTTP(w, r)
+
+		// Token has expired, check for refresh token
+		refreshHeader := r.Header.Get("Refresh-Token")
+		if refreshHeader == "" {
+			utils.SendError(w, http.StatusUnauthorized, fmt.Errorf("refresh token missing"))
+			return
+		}
+
+		// Validate and parse the refresh token
+		refreshString := strings.TrimPrefix(refreshHeader, "Bearer ")
+		refreshToken, err := auth.ParseToken(refreshString)
+		if err != nil {
+			utils.SendError(w, http.StatusUnauthorized, fmt.Errorf("invalid refresh token: %v", err))
+			return
+		}
+
+		if refreshToken.Valid {
+			// Generate new access token
+			claims := token.Claims.(jwt.MapClaims)
+			claims["exp"] = time.Now().Add(1 * time.Minute).Unix()
+			newToken, err := auth.GenerateAccessTokenFromClaims(claims)
+			if err != nil {
+				utils.SendError(w, http.StatusInternalServerError, fmt.Errorf("error generating new token: %v", err))
+				return
+			}
+			//w.Header().Set("Authorization", "Bearer "+newToken)
+			utils.SendData(w, newToken)
+			// Continue with the request
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		utils.SendError(w, http.StatusUnauthorized, fmt.Errorf("refresh token invalid"))
 	})
 }
