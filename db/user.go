@@ -4,6 +4,7 @@ import (
 	"ecommerce/models"
 	"errors"
 	"fmt"
+	"sync"
 )
 
 func Create(name, email, pass string) error {
@@ -39,18 +40,14 @@ func INSERT(name, email, pass string) error {
 	_, err := Db.Exec(query)
 	return err
 }
-func GetUser(email string, usrchan chan models.User) {
+func GetUser(email string, user *models.User, wg *sync.WaitGroup) {
 
+	defer wg.Done()
 	query := "SELECT id, email, name FROM users WHERE email = '" + email + "';"
-	var user models.User
 
 	err = Db.QueryRow(query).Scan(&user.Id, &user.Email, &user.Name)
 	if err != nil {
-		usrchan <- models.User{}
-		close(usrchan)
-		return
+		*user = models.User{} // reset user if there's an error
 	}
 
-	usrchan <- user
-	close(usrchan)
 }

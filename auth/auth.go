@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"ecommerce/config"
 	"ecommerce/models"
 	"time"
 
@@ -16,7 +17,7 @@ func GenerateToken(usr models.User) (string, string, error) {
 		"exp":   time.Now().Add(1 * time.Minute).Unix(),
 	}
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessTokenClaims)
-	accessTokenString, err := accessToken.SignedString([]byte(secretKey))
+	accessTokenString, err := accessToken.SignedString([]byte(config.GetConfig().JwtSecret))
 	if err != nil {
 		return "", "", err
 	}
@@ -27,7 +28,7 @@ func GenerateToken(usr models.User) (string, string, error) {
 		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(), // Refresh token valid for 7 days
 	}
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshTokenClaims)
-	refreshTokenString, err := refreshToken.SignedString([]byte(secretKey))
+	refreshTokenString, err := refreshToken.SignedString([]byte(config.GetConfig().JwtSecret))
 	if err != nil {
 		return "", "", err
 	}
@@ -35,17 +36,15 @@ func GenerateToken(usr models.User) (string, string, error) {
 	return accessTokenString, refreshTokenString, nil
 }
 
-var secretKey = []byte("M4q1t8i7eK2oQp5vF0u9Xs6BvG3hT1rD")
-
 func ParseToken(tokenString string) (*jwt.Token, error) {
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		return secretKey, nil
+		return config.GetConfig().JwtSecret, nil
 	})
 }
 func GenerateAccessTokenFromClaims(claims jwt.Claims) (string, error) {
 	// Create access token
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	accessTokenString, err := accessToken.SignedString([]byte(secretKey))
+	accessTokenString, err := accessToken.SignedString([]byte(config.GetConfig().JwtSecret))
 	if err != nil {
 		return "", err
 	}

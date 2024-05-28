@@ -22,6 +22,6 @@ func InitDB() error {
 
 	return err
 }
-func Close() {
+func CloseDB() {
 	Db.Close()
 }

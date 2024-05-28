@@ -23,19 +23,17 @@ func InitRouts(mux *http.ServeMux, manager *middlewares.Manager) {
 
 	mux.Handle(
 		"POST /products",
-		middlewares.AuthenticateJWT(
-			manager.With(
-				http.HandlerFunc(handlers.BuyProduct),
-			),
+		manager.With(
+			http.HandlerFunc(handlers.BuyProduct),
+			middlewares.AuthenticateJWT,
 		),
 	)
 
 	mux.Handle(
 		"GET /cart",
-		middlewares.AuthenticateJWT(
-			manager.With(
-				http.HandlerFunc(handlers.ShowCart),
-			),
+		manager.With(
+			http.HandlerFunc(handlers.ShowCart),
+			middlewares.AuthenticateJWT,
 		),
 	)
 }

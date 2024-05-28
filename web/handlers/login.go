@@ -3,12 +3,13 @@ package handlers
 import (
 	"ecommerce/auth"
 	"ecommerce/db"
-	model "ecommerce/models"
+	"ecommerce/models"
 	"ecommerce/web/utils"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 )
 
 type LoginUser struct {
@@ -37,9 +38,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usrchan := make(chan model.User)   //channel
-	go db.GetUser(user.Email, usrchan) //goroutine
-	usr := <-usrchan                   // get user from goroutine
+	var wg sync.WaitGroup
+	var usr models.User
+
+	wg.Add(1)
+	go db.GetUser(user.Email, &usr, &wg)
+	wg.Wait()
 
 	accessToken, refreshToken, err := auth.GenerateToken(usr)
 
