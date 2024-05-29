@@ -15,8 +15,15 @@ func InitDB() error {
 
 	config := config.GetConfig()
 
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.Host, config.Port, config.User, config.Password, config.Dbname, config.Sslmode)
+	connStr := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		config.Host,
+		config.Port,
+		config.User,
+		config.Password,
+		config.Dbname,
+		config.Sslmode,
+	)
 
 	Db, err = sql.Open("postgres", connStr)
 

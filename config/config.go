@@ -8,7 +8,7 @@ type Config struct {
 	Dbname    string `json:"dbname"`
 	Sslmode   string `json:"sslmode"`
 	Http_port string `json:"http_port"`
-	JwtSecret string `json:"jwt_secret"                 validate:"required"`
+	JwtSecret string `json:"jwt_secret"`
 }
 
 var config *Config

@@ -1,0 +1,174 @@
+{
+    "swagger": "3.0.0",
+    "info": {
+      "title": "E-commerce API",
+      "description": "API for e-commerce application",
+      "version": "1.0.0"
+    },
+    "host": "localhost:3000",
+    "basePath": "/",
+    "paths": {
+      "/register": {
+        "post": {
+          "summary": "Register a new user",
+          "description": "Register a new user",
+          "consumes": ["application/json"],
+          "produces": ["application/json"],
+          "parameters": [
+            {
+              "name": "body",
+              "in": "body",
+              "description": "User details",
+              "schema": {
+                "$ref": "#/definitions/NewUser"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User registered successfully",
+              "schema": {
+                "$ref": "#/definitions/NewUser"
+              }
+            },
+            "400": {
+              "description": "Invalid request body"
+            }
+          }
+        }
+      },
+      "/login": {
+        "get": {
+          "summary": "Login a user",
+          "description": "Login a user",
+          "produces": ["application/json"],
+          "parameters": [
+            {
+              "name": "body",
+              "in": "body",
+              "description": "User login details",
+              "schema": {
+                "$ref": "#/definitions/LoginUser"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User logged in successfully",
+              "schema": {
+                "$ref": "#/definitions/User"
+              }
+            },
+            "400": {
+              "description": "Invalid request body"
+            }
+          }
+        }
+      },
+      "/products": {
+        "post": {
+          "summary": "Buy a product",
+          "description": "Buy a product",
+          "consumes": ["application/json"],
+          "produces": ["application/json"],
+          "parameters": [
+            {
+              "name": "body",
+              "in": "body",
+              "description": "Product details",
+              "schema": {
+                "$ref": "#/definitions/Product"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Product added to cart successfully"
+            },
+            "400": {
+              "description": "Invalid request body"
+            }
+          }
+        }
+      },
+      "/cart": {
+        "get": {
+          "summary": "Show cart",
+          "description": "Show cart",
+          "produces": ["application/json"],
+          "responses": {
+            "200": {
+              "description": "Cart details",
+              "schema": {
+                "$ref": "#/definitions/ShowCart"
+              }
+            }
+          }
+        }
+      }
+    },
+    "definitions": {
+      "NewUser": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginUser": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "string"
+          }
+        }
+      },
+      "ShowCart": {
+        "type": "object",
+        "properties": {
+          "list": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Product"
+            }
+          },
+          "total": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+  
