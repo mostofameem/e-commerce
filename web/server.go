@@ -24,7 +24,7 @@ func StartServer(wg *sync.WaitGroup) {
 
 		conf := config.GetConfig()
 
-		addr := fmt.Sprintf(":%s", conf.Http_port)
+		addr := fmt.Sprintf(":%d", conf.HttpPort)
 		slog.Info(fmt.Sprintf("Listening at %s", addr))
 
 		if err := http.ListenAndServe(addr, handler); err != nil {

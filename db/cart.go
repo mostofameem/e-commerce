@@ -1,61 +1,140 @@
 package db
 
 import (
-	"ecommerce/models"
-	"fmt"
+	"database/sql"
+	"ecommerce/logger"
+	"log/slog"
+
+	sq "github.com/Masterminds/squirrel"
 )
+
+type CartList struct {
+	ProductName string `db:"product_name" json:"product_name"`
+	Price       int    `db:"price" json:"price"`
+	Quantity    int    `db:"quantity" json:"quantity"`
+}
 
 type Cart struct {
 	ProductName string `json:"product_name" validate:"required,alpha"`
 	Quantity    string `json:"quantity" validate:"required"`
 }
+type CartTypeRepo struct {
+	table string
+}
 
-func GetCart(id string, ch chan []models.CartList) {
-	query := "SELECT product_name,quantity,price from cart where user_id=" + id + ";"
-	rows, err := Db.Query(query)
+var cartTypeRepo *CartTypeRepo
+
+func initCartTypeRepo() {
+	cartTypeRepo = &CartTypeRepo{
+		table: "carts",
+	}
+}
+
+func GetCartTypeRepo() *CartTypeRepo {
+	return cartTypeRepo
+}
+
+func (r *CartTypeRepo) GetCart(id string, ch chan []CartList) {
+
+	var AllProduct []CartList
+
+	query, args, err := GetQueryBuilder().
+		Select("product_name", "price", "quantity").
+		From(r.table).
+		Where(sq.Eq{"user_id": id}).
+		ToSql()
 	if err != nil {
-		ch <- []models.CartList{}
+		slog.Error(
+			"Failed to create resource types select query getcart",
+			logger.Extra(map[string]any{
+				"error": err.Error(),
+				"query": query,
+				"args":  args,
+			}),
+		)
+		ch <- []CartList{}
+
 	}
 
-	var AllProduct []models.CartList
-
-	for rows.Next() {
-		var Product models.CartList
-		err := rows.Scan(&Product.ProductName, &Product.Quantity, &Product.Price)
-		if err != nil {
-			ch <- []models.CartList{}
-		}
-		AllProduct = append(AllProduct, Product)
+	err = GetReadDB().Select(&AllProduct, query, args...)
+	if err != nil {
+		slog.Error(
+			"Failed to get resource types getcart",
+			logger.Extra(map[string]any{
+				"error": err.Error(),
+			}),
+		)
+		ch <- []CartList{}
 	}
 	ch <- AllProduct
 }
 
-func InsertToCart(item Cart, id string) error {
+func (r *CartTypeRepo) InsertToCart(item Cart, id string) error {
+	product := GetProductTypeRepo().GetProduct(item)
 
-	product := GetProduct(item)
-	query := "INSERT INTO cart values('" + id + "','" + product.Name + "','" + product.Price + "','" + item.Quantity + "');"
-	_, err := Db.Exec(query)
+	columns := map[string]interface{}{
+		"id":       id,
+		"name":     product.Name,
+		"price":    product.Price,
+		"quantity": item.Quantity,
+	}
+	var colNames []string
+	var colValues []any
+
+	for colName, colVal := range columns {
+		colNames = append(colNames, colName)
+		colValues = append(colValues, colVal)
+	}
+
+	query, args, err := GetQueryBuilder().
+		Insert(r.table).
+		Columns(colNames...).
+		Values(colValues...).
+		ToSql()
+	if err != nil {
+		slog.Error(
+			"Failed to create resource type insert query",
+			logger.Extra(map[string]any{
+				"error": err.Error(),
+				"query": query,
+				"args":  args,
+			}),
+		)
+	}
 	return err
 
 }
-func ShowCart(id string) ([]models.CartList, string) {
-	listch := make(chan []models.CartList)
-	totalch := make(chan string)
-
-	go GiveMeTotal(id, totalch)
-	go GetCart(id, listch)
-
-	list := <-listch
-	total := <-totalch
-	total = fmt.Sprintf("Total =%s", total)
-	return list, total
-
-}
-
-func StringToInt(s string) int {
-	n := 0
-	for i := 0; i < len(s); i++ {
-		n = (n*10 + int(s[i]-'0'))
+func (r *CartTypeRepo) GiveMeTotal(id string, totalchan chan string) {
+	var total string
+	queryString, args, err := GetQueryBuilder().
+		Select("sum(price*quantity)").
+		From(r.table).
+		Where(sq.Eq{"user_id": id}).
+		ToSql()
+	if err != nil {
+		slog.Error(
+			"Failed to create query",
+			logger.Extra(map[string]any{
+				"error": err.Error(),
+				"query": queryString,
+				"args":  args,
+			}),
+		)
+		totalchan <- "-1"
 	}
-	return n
+
+	err = GetReadDB().Get(&total, queryString, args...)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			totalchan <- "-1"
+		}
+		slog.Error(
+			"Failed to get the content",
+			logger.Extra(map[string]any{
+				"error": err.Error(),
+			}),
+		)
+		totalchan <- "-1"
+	}
+	totalchan <- total
 }

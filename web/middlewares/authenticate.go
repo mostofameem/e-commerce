@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"ecommerce/config"
-	"ecommerce/models"
+	"ecommerce/db"
 	"ecommerce/web/utils"
 	"fmt"
 	"log"
@@ -13,7 +13,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-func GenerateToken(usr models.User) (string, string, error) {
+func GenerateToken(usr db.User) (string, string, error) {
 	// Create access token
 	accessTokenClaims := jwt.MapClaims{
 		"Id":    usr.Id,

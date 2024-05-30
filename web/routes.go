@@ -8,14 +8,14 @@ import (
 
 func InitRouts(mux *http.ServeMux, manager *middlewares.Manager) {
 	mux.Handle(
-		"POST /users",
+		"POST /register",
 		manager.With(
 			http.HandlerFunc(handlers.Register),
 		),
 	)
 
 	mux.Handle(
-		"GET /users",
+		"POST /login",
 		manager.With(
 			http.HandlerFunc(handlers.Login),
 		),

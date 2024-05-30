@@ -1,10 +1,29 @@
 {
-    "host": "localhost",
-    "port": "5432",
-    "user": "root",
-    "password": "admin",
-    "dbname": "Db",
-    "sslmode": "disable",   
-    "http_port": "3000",
-    "jwt_secret": "H656H6KH56K46KK4644654Y65YI6Y5Y"
+    "mode": "debug",
+    "service_name": "Ecommerce",
+    "http_port": 3000,
+    "jwt_secret": "H656H6KH56K46KK4644654Y65YI6Y5Y",
+
+    "db": {
+        "read": {
+          "host": "127.0.0.1",
+          "port": 5432,
+          "name": "Db",
+          "userr": "postgres",
+          "user": "root",
+          "pass": "admin",
+          "max_idle_time_in_minute": 60,
+          "enable_ssl_mode": false
+        },
+        "write": {
+          "host": "127.0.0.1",
+          "port": 5432,
+          "name": "Db",
+          "userr": "postgres",
+          "user": "root",
+          "pass": "admin",
+          "max_idle_time_in_minute": 60,
+          "enable_ssl_mode": false
+        }
+      }
 }

@@ -1,34 +1,63 @@
 package db
 
 import (
-	"database/sql"
 	"ecommerce/config"
 	"fmt"
+	"log/slog"
+	"os"
+	"time"
 
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
-var Db *sql.DB
-var err error
-
-func InitDB() error {
-
-	config := config.GetConfig()
-
-	connStr := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		config.Host,
-		config.Port,
-		config.User,
-		config.Password,
-		config.Dbname,
-		config.Sslmode,
+func connect(dbConfig config.DBConfig) *sqlx.DB {
+	dbSource := fmt.Sprintf(
+		"user=%s password=%s host=%s port=%d dbname=%s sslmode=disable",
+		dbConfig.User,
+		dbConfig.Pass,
+		dbConfig.Host,
+		dbConfig.Port,
+		dbConfig.Name,
 	)
 
-	Db, err = sql.Open("postgres", connStr)
+	if !dbConfig.EnableSSLMode {
+		dbSource += " sslmode=disable"
+	}
 
-	return err
+	dbCon, err := sqlx.Connect("postgres", dbSource)
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+
+	dbCon.SetConnMaxIdleTime(
+		time.Duration(dbConfig.MaxIdleTimeInMinute * int(time.Minute)),
+	)
+
+	return dbCon
 }
+
+func ConnectDB() {
+	conf := config.GetConfig()
+
+	readDb = connect(conf.DB.Read)
+	slog.Info("Connected to read database")
+
+	writeDb = connect(conf.DB.Write)
+	slog.Info("Connected to write database")
+}
+
 func CloseDB() {
-	Db.Close()
+	if err := readDb.Close(); err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	slog.Info("Disconnected from read database")
+
+	if err := writeDb.Close(); err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	slog.Info("Disconnected from write database")
 }
