@@ -16,7 +16,7 @@ type CartList struct {
 
 type Cart struct {
 	ProductName string `json:"product_name" validate:"required,alpha"`
-	Quantity    string `json:"quantity" validate:"required"`
+	Quantity    int    `json:"quantity" validate:"required"`
 }
 type CartTypeRepo struct {
 	table string
@@ -34,7 +34,7 @@ func GetCartTypeRepo() *CartTypeRepo {
 	return cartTypeRepo
 }
 
-func (r *CartTypeRepo) GetCart(id string, ch chan []CartList) {
+func (r *CartTypeRepo) GetCart(id int, ch chan []CartList) {
 
 	var AllProduct []CartList
 
@@ -42,6 +42,7 @@ func (r *CartTypeRepo) GetCart(id string, ch chan []CartList) {
 		Select("product_name", "price", "quantity").
 		From(r.table).
 		Where(sq.Eq{"user_id": id}).
+		OrderBy("quantity DESC").
 		ToSql()
 	if err != nil {
 		slog.Error(
@@ -69,14 +70,13 @@ func (r *CartTypeRepo) GetCart(id string, ch chan []CartList) {
 	ch <- AllProduct
 }
 
-func (r *CartTypeRepo) InsertToCart(item Cart, id string) error {
+func (r *CartTypeRepo) InsertToCart(item Cart, id int) error {
 	product := GetProductTypeRepo().GetProduct(item)
-
 	columns := map[string]interface{}{
-		"id":       id,
-		"name":     product.Name,
-		"price":    product.Price,
-		"quantity": item.Quantity,
+		"user_id":      id,
+		"product_name": product.Name,
+		"price":        product.Price,
+		"quantity":     item.Quantity,
 	}
 	var colNames []string
 	var colValues []any
@@ -101,11 +101,12 @@ func (r *CartTypeRepo) InsertToCart(item Cart, id string) error {
 			}),
 		)
 	}
+	err = GetWriteDB().QueryRow(query, args...).Err()
 	return err
 
 }
-func (r *CartTypeRepo) GiveMeTotal(id string, totalchan chan string) {
-	var total string
+func (r *CartTypeRepo) GiveMeTotal(id int, totalchan chan int) {
+	var total int
 	queryString, args, err := GetQueryBuilder().
 		Select("sum(price*quantity)").
 		From(r.table).
@@ -120,13 +121,13 @@ func (r *CartTypeRepo) GiveMeTotal(id string, totalchan chan string) {
 				"args":  args,
 			}),
 		)
-		totalchan <- "-1"
+		totalchan <- -1
 	}
 
 	err = GetReadDB().Get(&total, queryString, args...)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			totalchan <- "-1"
+			totalchan <- -1
 		}
 		slog.Error(
 			"Failed to get the content",
@@ -134,7 +135,7 @@ func (r *CartTypeRepo) GiveMeTotal(id string, totalchan chan string) {
 				"error": err.Error(),
 			}),
 		)
-		totalchan <- "-1"
+		totalchan <- -1
 	}
 	totalchan <- total
 }

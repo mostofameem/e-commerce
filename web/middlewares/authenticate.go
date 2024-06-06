@@ -10,35 +10,47 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 )
 
+type AuthClaims struct {
+	Id int `json:"id"`
+	jwt.RegisteredClaims
+}
+
+// Define a custom type for the context key
 func GenerateToken(usr db.User) (string, string, error) {
-	// Create access token
-	accessTokenClaims := jwt.MapClaims{
-		"Id":    usr.Id,
-		"Name":  usr.Name,
-		"Email": usr.Email,
-		"exp":   time.Now().Add(1 * time.Minute).Unix(),
+	conf := config.GetConfig()
+	expirationTime := time.Now().Add(5 * time.Minute).Unix()
+
+	accessToken, err := jwt.NewWithClaims(
+		jwt.SigningMethodHS256,
+		jwt.MapClaims{
+			"Id":  usr.Id,
+			"exp": expirationTime,
+		},
+	).SignedString([]byte(conf.JwtSecret))
+	if err != nil {
+		log.Println(err.Error())
+		return "", "", fmt.Errorf("error")
 	}
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessTokenClaims)
-	accessTokenString, err := accessToken.SignedString([]byte(config.GetConfig().JwtSecret))
+
+	Time := time.Now().Add(7 * 24 * time.Hour).Unix()
+
+	token := jwt.NewWithClaims(
+		jwt.SigningMethodHS256,
+		jwt.MapClaims{
+			"Id":  usr.Id,
+			"exp": Time,
+		},
+	)
+
+	refreshToken, err := token.SignedString([]byte(conf.JwtSecret))
 	if err != nil {
 		return "", "", err
 	}
 
-	// Create refresh token
-	refreshTokenClaims := jwt.MapClaims{
-		"Id":  usr.Id,
-		"exp": time.Now().Add(7 * 24 * time.Hour).Unix(), // Refresh token valid for 7 days
-	}
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshTokenClaims)
-	refreshTokenString, err := refreshToken.SignedString([]byte(config.GetConfig().JwtSecret))
-	if err != nil {
-		return "", "", err
-	}
-
-	return accessTokenString, refreshTokenString, nil
+	return accessToken, refreshToken, nil
 }
 
 func ParseToken(tokenString string) (*jwt.Token, error) {
@@ -46,15 +58,12 @@ func ParseToken(tokenString string) (*jwt.Token, error) {
 		return []byte(config.GetConfig().JwtSecret), nil
 	})
 }
-func GenerateAccessTokenFromClaims(claims jwt.Claims) (string, error) {
+
+func GenerateAccessTokenFromRefreshToken(claims jwt.Claims) (string, error) {
 	// Create access token
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	accessTokenString, err := accessToken.SignedString([]byte(config.GetConfig().JwtSecret))
-	if err != nil {
-		return "", err
-	}
-
-	return accessTokenString, nil
+	return accessTokenString, err
 }
 
 func AuthenticateJWT(next http.Handler) http.Handler {
@@ -91,7 +100,7 @@ func AuthenticateJWT(next http.Handler) http.Handler {
 			// Generate new access token
 			claims := token.Claims.(jwt.MapClaims)
 			claims["exp"] = time.Now().Add(1 * time.Minute).Unix()
-			newToken, err := GenerateAccessTokenFromClaims(claims)
+			newToken, err := GenerateAccessTokenFromRefreshToken(claims)
 			if err != nil {
 				utils.SendError(w, http.StatusInternalServerError, fmt.Errorf("error generating new token: %v", err))
 				return
@@ -106,25 +115,22 @@ func AuthenticateJWT(next http.Handler) http.Handler {
 	})
 }
 
-func GetIdFromHeader(r string) (string, error) {
+func GetUserIDFromToken(tokenStr string) (int, error) {
+	conf := config.GetConfig()
 
-	authHeader := r
-	if authHeader == "" {
-		return "", fmt.Errorf("authorization header is missing")
-	}
-
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	token, err := ParseToken(tokenString)
+	// Parse JWT
+	var claims AuthClaims
+	_, err := jwt.ParseWithClaims(
+		tokenStr,
+		&claims,
+		func(t *jwt.Token) (interface{}, error) {
+			return []byte(conf.JwtSecret), nil
+		},
+	)
 	if err != nil {
-		return "", fmt.Errorf("error Parsing")
+		return 0, err
 	}
 
-	// Extract user ID from token claims
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return "", fmt.Errorf("invalid token claims")
-	}
-
-	userID, _ := claims["Id"].(string)
-	return userID, nil
+	// Return user ID from claims
+	return claims.Id, nil
 }

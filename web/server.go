@@ -3,6 +3,7 @@ package web
 import (
 	"ecommerce/config"
 	"ecommerce/web/middlewares"
+	"ecommerce/web/swagger"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -18,6 +19,7 @@ func StartServer(wg *sync.WaitGroup) {
 	handler := middlewares.EnableCors(mux)
 
 	wg.Add(1)
+	swagger.SetupSwagger(mux, manager)
 
 	go func() {
 		defer wg.Done()

@@ -22,6 +22,13 @@ func InitRouts(mux *http.ServeMux, manager *middlewares.Manager) {
 	)
 
 	mux.Handle(
+		"POST /register/{id}",
+		manager.With(
+			http.HandlerFunc(handlers.Verification),
+		),
+	)
+
+	mux.Handle(
 		"POST /products",
 		manager.With(
 			http.HandlerFunc(handlers.BuyProduct),
@@ -36,4 +43,5 @@ func InitRouts(mux *http.ServeMux, manager *middlewares.Manager) {
 			middlewares.AuthenticateJWT,
 		),
 	)
+
 }

@@ -32,7 +32,8 @@ func BuyProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := middlewares.GetIdFromHeader(r.Header.Get("Authorization")) //get user id from token
+	userID, err := middlewares.GetUserIDFromToken(r.Header.Get("Authorization"))
+
 	if err != nil {
 		slog.Error("Failed to get UserId", logger.Extra(map[string]any{
 			"error":   err.Error(),
@@ -44,7 +45,7 @@ func BuyProduct(w http.ResponseWriter, r *http.Request) {
 
 	err = db.GetCartTypeRepo().InsertToCart(item, userID) //add to cart
 	if err != nil {
-		slog.Error("Failed to insert into cart ", logger.Extra(map[string]any{
+		slog.Error("Failed to insert into carts ", logger.Extra(map[string]any{
 			"error":   err.Error(),
 			"payload": item,
 			"User Id": userID,
@@ -64,7 +65,7 @@ func UrlOperation(r string) (db.Cart, error) {
 	}
 	queryParams := parsedUrl.Query()
 	item.ProductName = queryParams.Get("product_name")
-	item.Quantity = queryParams.Get("quantity")
+	item.Quantity = StringToInt(queryParams.Get("quantity"))
 
 	err = utils.Validate(item)
 	if err != nil {
@@ -75,18 +76,26 @@ func UrlOperation(r string) (db.Cart, error) {
 
 func ShowCart(w http.ResponseWriter, r *http.Request) {
 
-	id, err := middlewares.GetIdFromHeader(r.Header.Get("Authorization"))
+	userID, err := middlewares.GetUserIDFromToken(r.Header.Get("Authorization"))
+
 	if err != nil {
 		utils.SendError(w, 404, err)
 		return
 	}
 	listch := make(chan []db.CartList)
-	totalch := make(chan string)
+	totalch := make(chan int)
 
-	go db.GetCartTypeRepo().GetCart(id, listch)
-	go db.GetCartTypeRepo().GiveMeTotal(id, totalch)
+	go db.GetCartTypeRepo().GetCart(userID, listch)
+	go db.GetCartTypeRepo().GiveMeTotal(userID, totalch)
 
 	list := <-listch
 	total := <-totalch
-	utils.SendBothData(w, fmt.Sprintf("Total =%s", total), list)
+	utils.SendBothData(w, fmt.Sprintf("Total =%d", total), list)
+}
+func StringToInt(s string) int {
+	n := 0
+	for i := 0; i < len(s); i++ {
+		n = n*10 + int(s[i]-'0')
+	}
+	return n
 }
